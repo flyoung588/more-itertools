@@ -5166,6 +5166,28 @@ class AllUniqueTests(TestCase):
         self.assertFalse(key)  # Sanity: the key itself is falsey
         self.assertEqual(mi.all_unique(['A', 'B', 'C', 'b'], key), False)
 
+    def test_falsey_key_unhashable_results_short_circuit(self):
+        class AnagramKey:
+            def __init__(self):
+                self.calls = []
+
+            def __bool__(self):
+                return False
+
+            def __call__(self, word):
+                self.calls.append(word)
+                return sorted(word)
+
+        def words():
+            yield 'ab'
+            yield 'ba'
+            raise AssertionError('consumed past the first duplicate key')
+
+        key = AnagramKey()
+        self.assertFalse(mi.all_unique(words(), key))
+        self.assertEqual(key.calls, ['ab', 'ba'])
+        self.assertTrue(mi.all_unique(['ab', 'ac'], AnagramKey()))
+
     def test_infinite(self):
         self.assertEqual(mi.all_unique(mi.prepend(3, count())), False)
 
